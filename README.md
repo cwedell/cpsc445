@@ -7,6 +7,7 @@ CPSC 445-01
 *** Note: Docker was giving me fits so I wasn't ever able to test the multithreading. The code is there in the comments. This program runs as intended with a single thread. ***
 
 9/28/2021: moved to branch assignment01, added webhook
+9/29/2021: moved Grid implementation to life.cpp, omitting need for Grid.h and Grid.cpp
 
 Sources used:
 http://www.cplusplus.com/forum/general/833/
