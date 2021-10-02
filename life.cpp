@@ -148,14 +148,14 @@ int main(int argc, char** argv) {
       while(getline(instream, line)) {
         string c;
         vector<int> row;
-        for(int i = 0; i < line.size() - 1; ++i) { // -1 to strip newline from end of line
+        for(int i = 0; i < line.size(); ++i) {
           c = line[i];
           if(c != "0" && c != "1") { // check that only 0 and 1 appear in file
             throw invalid_argument("Invalid input");
           }
           row.push_back(stoi(c));
           if(i == 0) { // get numcols from first line of file
-            colCount = line.size() - 1;
+            colCount = line.size();
           }
         }
         vals.push_back(row);
