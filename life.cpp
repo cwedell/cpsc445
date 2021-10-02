@@ -1,8 +1,9 @@
 #include <fstream>
 #include <iostream>
-// #include <mutex>
-// #include <thread>
+#include <math.h>
+#include <mutex>
 #include <stdexcept>
+#include <thread>
 #include <vector>
 
 using namespace std;
@@ -86,29 +87,37 @@ int Grid::nextState(int r, int c) {
   }
 }
 
-/*
-mutex job_list_mtx;
+class Task { // a row and column to calculate
+public:
+  int r, c;
+  Task(int r, int c) {
+    this->r = r;
+    this->c = c;
+  }
+};
 
-void task(vector<int> myjob, Grid& curr, Grid& next) {
-  next.setCell(myjob[0], myjob[1], curr.nextState(myjob[0], myjob[1]));
-}
+mutex tasks_mtx; // protects vector of tasks
 
-void pool(vector<vector<int>>& joblist, Grid& curr, Grid& next) {
+void TaskDoer(vector<Task> &vect, Grid &curr, Grid &next, int numtasks) {
   bool task_todo = false;
-  vector<int> nextjob;
-  while(!joblist.empty()) {
-    job_list_mtx.lock();
-    if(!joblist.empty()) { // second check to ensure list is not empty
-      nextjob = joblist.pop_back();
+  Task mytask(-1, -1);
+  for(int i = 0; i < numtasks; ++i) { // only run to complete the number of tasks assigned
+    tasks_mtx.lock();
+    if(!vect.empty()) { // ensure list is not empty
+      mytask = vect.back();
+      vect.pop_back();
       task_todo = true;
     }
-    job_list_mtx.unlock();
+    tasks_mtx.unlock();
     if(task_todo) {
-      task(nextjob, curr, next);
+      // update the value in the next grid
+      next.setCell(mytask.r, mytask.c, curr.nextState(mytask.r, mytask.c));
     }
+    task_todo = false;
   }
 }
-*/
+
+vector<Task> tasks;
 
 int main(int argc, char** argv) {
   string filein;
@@ -121,7 +130,7 @@ int main(int argc, char** argv) {
     numsteps = stoi(argv[3]);
     numthreads = stoi(argv[4]);
   } catch(exception& e) {
-    cout << "Invalid arguments";
+    cout << "Invalid arguments" << endl;
     return 1;
   }
 
@@ -137,16 +146,16 @@ int main(int argc, char** argv) {
     }
     if(instream.is_open()) {
       while(getline(instream, line)) {
-        string c = "";
+        string c;
         vector<int> row;
-        for(int i = 0; i < line.size(); ++i) {
+        for(int i = 0; i < line.size() - 1; ++i) { // -1 to strip newline from end of line
           c = line[i];
-          if(stoi(c) != 0 && stoi(c) != 1) { // check that only 0 and 1 appear in file
+          if(c != "0" && c != "1") { // check that only 0 and 1 appear in file
             throw invalid_argument("Invalid input");
           }
           row.push_back(stoi(c));
           if(i == 0) { // get numcols from first line of file
-            colCount = line.size();
+            colCount = line.size() - 1;
           }
         }
         vals.push_back(row);
@@ -155,7 +164,7 @@ int main(int argc, char** argv) {
     }
     instream.close();
   } catch(exception& e) {
-    cout << "Invalid input";
+    cout << "Invalid input" << endl;
   }
 
   int numrows = rowCount;
@@ -164,36 +173,35 @@ int main(int argc, char** argv) {
   Grid currentgrid(numrows, numcols, vals);
   Grid nextgrid(numrows, numcols, vals);
 
-  /*
-  vector<vector<int>> cells_todo;
-  for(int i = 0; i < numrows; ++i) {
-    for(int j = 0; j < numcols; ++j) {
-      cells_todo.push_back(vector<int>{i, j});
-    }
-  }
-
-  vector<thread*> threads;
-
-  for(int i = 0; i < numthreads; ++i) {
-    threads.push_back(pthread_create(&threads[i], NULL, pool(cells_todo, currentgrid, nextgrid)));
-  }
-
-  for(int i = 0; i < numthreads; ++i) {
-    thread& t = *threads[i];
-    t.join();
-    delete threads[i];
-  }
-
-  threads.resize(0);
-  */
-
-  // play the game! calculate a cell value for each cell in each step
+  // play the game!
   for(int step = 0; step < numsteps; ++step) {
+    // first create a list of tasks to do: one for each cell
     for(int i = 0; i < numrows; ++i) {
       for(int j = 0; j < numcols; ++j) {
-        nextgrid.setCell(i, j, currentgrid.nextState(i, j));
+        tasks.push_back(Task(i, j));
       }
     }
+
+    vector<thread*> threads;
+
+    // assign a number of tasks to each thread, such that all threads run and the task vector is emptied
+    int numtasks = int(ceil(float(tasks.size()) / float(numthreads)));
+
+    for(int i = 0; i < numthreads; ++i) {
+      threads.push_back(new thread([&,i](){
+        TaskDoer(tasks, currentgrid, nextgrid, numtasks);
+      }));
+    }
+
+    for(int i = 0; i < numthreads; ++i) {
+      thread& t = *threads[i];
+      t.join();
+      delete threads[i];
+    }
+
+    threads.resize(0);
+
+    // grab the next grid, fully updated, and assign it to be the current grid
     currentgrid = nextgrid;
   }
 
