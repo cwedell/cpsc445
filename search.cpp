@@ -11,21 +11,21 @@ using namespace std;
 
 mutex results_mtx; // protects map of results
 
+// takes a list of keywords and searches all assigned lines for those keywords
+// updates the number of words found in a map called results
 void TextSearch(vector<string> keys, vector<string> tosearch, map<string, int> &results) {
   for(int i = 0; i < keys.size(); ++i) {
     for(int j = 0; j < tosearch.size(); ++j) {
-      int newmatches = 0;
-      string tomatch = keys[i];
-      string searchtext = tosearch[j];
-      cout << "searching for " << tomatch << " in " << searchtext << endl;
-      size_t pos = searchtext.find(tomatch, 0);
-      while(pos != string::npos) {
-        cout << "match found!" << endl;
-        ++newmatches;
-        pos = searchtext.find(tomatch, pos + 1);
+      int matches = 0; // number of matches found for this word
+      string tomatch = keys[i]; // word to match
+      string searchtext = tosearch[j]; // line in which to find the word
+      size_t pos = searchtext.find(tomatch, 0); // find first instance of word
+      while(pos != string::npos) { // true if match was found
+        ++matches;
+        pos = searchtext.find(tomatch, pos + 1); // search again if there are multiple instances of the word
       }
       results_mtx.lock();
-      results[tomatch] += newmatches;
+      results[tomatch] += matches;
       results_mtx.unlock();
     }
   }
@@ -35,6 +35,7 @@ bool comparison(string a, string b) {
   return a < b;
 }
 
+// sorts the strings in alphabetical order
 vector<string> alphabetize(vector<string> a) {
   sort(a.begin(), a.end(), comparison);
   return a;
@@ -55,7 +56,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // read files
+  // read keywords file
   vector<string> keywords;
   string line = "";
   try {
@@ -65,7 +66,6 @@ int main(int argc, char** argv) {
     }
     if(instream.is_open()) {
       while(getline(instream, line)) {
-        line.pop_back();
         keywords.push_back(line);
       }
     }
@@ -74,6 +74,7 @@ int main(int argc, char** argv) {
     cout << "Invalid input" << endl;
   }
 
+  // read text file
   vector<string> text;
   line = "";
   try {
@@ -91,8 +92,10 @@ int main(int argc, char** argv) {
     cout << "Invalid input" << endl;
   }
 
+  // alphabetize our keywords before creating map
   keywords = alphabetize(keywords);
 
+  // string: word, int: number of matches
   map<string, int> output;
   for(int i = 0; i < keywords.size(); ++i) {
     output[keywords[i]] = 0;
@@ -120,6 +123,7 @@ int main(int argc, char** argv) {
   threads.resize(0);
 
   ofstream outstream(outfile);
+  // iterate over map and print results to output file
   map<string, int>::iterator it;
   for(it = output.begin(); it != output.end(); ++it) {
     outstream << it->first << " ";
