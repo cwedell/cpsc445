@@ -21,8 +21,8 @@ int main (int argc, char *argv[]) {
   string fileout = "output.txt";
   string dna = "";
   string line = "";
-  char letters[] = {'A', 'C', 'G', 'T'};
-  char oppletters[] = {'T', 'G', 'C', 'A'};
+  char letters[] = {'A', 'T', 'G', 'C'};
+  char oppletters[] = {'T', 'A', 'C', 'G'};
 
   // Initialized MPI
   check_error(MPI_Init(&argc, &argv), "unable to initialize MPI");
