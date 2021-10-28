@@ -21,8 +21,8 @@ int main (int argc, char *argv[]) {
   string fileout = "output.txt";
   string dna = "";
   string line = "";
-  char letters[] = {'A', 'C', 'G', 'T'};
-  map<char, int> output = {{'A', 0}, {'C', 0}, {'G', 0}, {'T', 0}};
+  char letters[] = {'A', 'T', 'G', 'C'};
+  map<char, int> output = {{'A', 0}, {'T', 0}, {'G', 0}, {'C', 0}};
 
   // Initialized MPI
   check_error(MPI_Init(&argc, &argv), "unable to initialize MPI");
@@ -56,7 +56,7 @@ int main (int argc, char *argv[]) {
   check_error(MPI_Bcast(&size, 1, MPI_INT, 0, MPI_COMM_WORLD));
   check_error(MPI_Bcast(dnachar, size, MPI_CHAR, 0, MPI_COMM_WORLD));
 
-  if(rank != 0) {
+  if(rank != 0 && rank < 5) { // we don't want ranks handling nonexistent letters
     char mychar = letters[rank - 1]; // -1 so that rank=1 handles index=0
     int charcount = 0;
     for(int i = 0; i < size; ++i) {
@@ -70,7 +70,7 @@ int main (int argc, char *argv[]) {
   if(rank == 0) {
     int count;
     MPI_Status status[2];
-    for(int i = 1; i < p; ++i) { // start receiving from process 1
+    for(int i = 1; i < 5; ++i) { // start receiving from process 1
       check_error(MPI_Recv(&count, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &status[0])); // tag 0
       output[letters[i - 1]] = count; // -1 since rank=1 handled index=0
     }
@@ -78,7 +78,8 @@ int main (int argc, char *argv[]) {
     ofstream outstream(fileout);
     map<char, int>::iterator it;
     for(it = output.begin(); it != output.end(); ++it) {
-      outstream << it->first << " ";
+      string chartostr(1, it->first);
+      outstream << chartostr << " ";
       outstream << it->second << endl;
     }
     outstream.close();
