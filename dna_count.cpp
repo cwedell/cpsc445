@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <math.h>
 #include <mpi.h>
 
 using namespace std;
@@ -47,32 +48,53 @@ int main (int argc, char *argv[]) {
       cout << "Invalid input" << endl;
     }
   }
-
-  // cannot broadcast strings, only char arrays
   char dnachar[dna.length() + 1];
   strcpy(dnachar, dna.c_str());
-  // also pass size, for proper iteration
-  int size = dna.length() + 1;
-  check_error(MPI_Bcast(&size, 1, MPI_INT, 0, MPI_COMM_WORLD));
-  check_error(MPI_Bcast(dnachar, size, MPI_CHAR, 0, MPI_COMM_WORLD));
+  double size = dna.length() + 1;
+  int sizeeach = (int) (ceil(size / p));
+  check_error(MPI_Bcast(&sizeeach, 1, MPI_INT, 0, MPI_COMM_WORLD));
+  char mydnachar[sizeeach];
+  check_error(MPI_Scatter(dnachar, sizeeach, MPI_CHAR, mydnachar, sizeeach, MPI_CHAR, 0, MPI_COMM_WORLD));
 
-  if(rank != 0 && rank < 5) { // we don't want ranks handling nonexistent letters
-    char mychar = letters[rank - 1]; // -1 so that rank=1 handles index=0
-    int charcount = 0;
-    for(int i = 0; i < size; ++i) {
-      if(dnachar[i] == mychar) {
-        ++charcount;
+  // cannot broadcast strings, only char arrays
+  // also pass size, for proper iteration
+
+  //if(rank != 0) {
+    int countA = 0, countT = 0, countG = 0, countC = 0;
+    for(int i = 0; i < sizeeach; ++i) {
+      char mychar = mydnachar[i];
+      switch(mychar) {
+        case 'A':
+          ++countA;
+          break;
+        case 'T':
+          ++countT;
+          break;
+        case 'G':
+          ++countG;
+          break;
+        case 'C':
+          ++countC;
+          break;
       }
     }
-    check_error(MPI_Send(&charcount, 1, MPI_INT, 0, 0, MPI_COMM_WORLD)); // tag 0
+    int myoutput[] = {countA, countT, countG, countC};
+    //check_error(MPI_Send(myoutput, 4, MPI_INT, 0, 0, MPI_COMM_WORLD)); // tag 0
+  //}
+
+  int alloutputs[p*4];
+  check_error(MPI_Gather(myoutput, 4, MPI_INT, alloutputs, 4, MPI_INT, 0, MPI_COMM_WORLD));
+
+  if(rank == 0) {
+    for(int i = 0; i < p*4; ++i) {
+    }
   }
 
   if(rank == 0) {
-    int count;
-    MPI_Status status[2];
-    for(int i = 1; i < 5; ++i) { // start receiving from process 1
-      check_error(MPI_Recv(&count, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &status[0])); // tag 0
-      output[letters[i - 1]] = count; // -1 since rank=1 handled index=0
+    for(int i = 0; i < p; ++i) {
+      for(int j = 0; j < 4; ++j) {
+        output[letters[j]] += alloutputs[i*4 + j];
+      }
     }
     // print file out
     ofstream outstream(fileout);
