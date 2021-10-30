@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <math.h>
 #include <mpi.h>
 #include <vector>
 
@@ -23,6 +24,25 @@ int main (int argc, char *argv[]) {
   string fileout = "output.txt";
   string dna = "";
   string line = "";
+  map<string, int> triplettable = { // integer representations of each possible triplet
+    {"AAA", 111}, {"AAT", 112}, {"AAG", 113}, {"AAC", 114},
+    {"ATA", 121}, {"ATT", 122}, {"ATG", 123}, {"ATC", 124},
+    {"AGA", 131}, {"AGT", 132}, {"AGG", 133}, {"AGC", 134},
+    {"ACA", 141}, {"ACT", 142}, {"ACG", 143}, {"ACC", 144},
+    {"TAA", 211}, {"TAT", 212}, {"TAG", 213}, {"TAC", 214},
+    {"TTA", 221}, {"TTT", 222}, {"TTG", 223}, {"TTC", 224},
+    {"TGA", 231}, {"TGT", 232}, {"TGG", 233}, {"TGC", 234},
+    {"TCA", 241}, {"TCT", 242}, {"TCG", 243}, {"TCC", 244},
+    {"GAA", 311}, {"GAT", 312}, {"GAG", 313}, {"GAC", 314},
+    {"GTA", 321}, {"GTT", 322}, {"GTG", 323}, {"GTC", 324},
+    {"GGA", 331}, {"GGT", 332}, {"GGG", 333}, {"GGC", 334},
+    {"GCA", 341}, {"GCT", 342}, {"GCG", 343}, {"GCC", 344},
+    {"CAA", 411}, {"CAT", 412}, {"CAG", 413}, {"CAC", 414},
+    {"CTA", 421}, {"CTT", 422}, {"CTG", 423}, {"CTC", 424},
+    {"CGA", 431}, {"CGT", 432}, {"CGG", 433}, {"CGC", 434},
+    {"CCA", 441}, {"CCT", 442}, {"CCG", 443}, {"CCC", 444}
+  };
+  map<string, int> output;
 
   // Initialized MPI
   check_error(MPI_Init(&argc, &argv), "unable to initialize MPI");
@@ -48,7 +68,6 @@ int main (int argc, char *argv[]) {
     }
   }
 
-  // cannot broadcast strings, only char arrays
   char dnachar[dna.length() + 1];
   strcpy(dnachar, dna.c_str());
 
@@ -64,57 +83,55 @@ int main (int argc, char *argv[]) {
         }
       }
     }
-    for(int i = 0; i < triplets.size(); ++i) {
-      int ranktosend = (i % (p - 1)) + 1; // assigns index=0 to rank=1 and loops
-      char arrtosend[3];
-      strcpy(arrtosend, triplets[i].c_str());
-      check_error(MPI_Send(arrtosend, 3, MPI_CHAR, ranktosend, 0, MPI_COMM_WORLD)); // tag 0
-    }
   }
-
-  // also pass size, for proper iteration
-  int arrsize = dna.length() + 1;
-  check_error(MPI_Bcast(&arrsize, 1, MPI_INT, 0, MPI_COMM_WORLD));
-  check_error(MPI_Bcast(dnachar, arrsize, MPI_CHAR, 0, MPI_COMM_WORLD));
 
   int vecsize = triplets.size();
   check_error(MPI_Bcast(&vecsize, 1, MPI_INT, 0, MPI_COMM_WORLD));
 
-  if(rank != 0) {
+  int tripletsarr[vecsize];
+  if(rank == 0) {
     for(int i = 0; i < vecsize; ++i) {
-      if(rank == (i % (p - 1)) + 1) { // assigns index=0 to rank=1 and loops
-        MPI_Status status[2];
-        char arrtorecv[3];
-        check_error(MPI_Recv(arrtorecv, 3, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status[0])); // tag 0
-        int tripletcount = 0;
-        for(int j = 0; j < arrsize; ++j) {
-          if(j % 3 == 2) { // first runs for index=2
-            char arrtocheck[] = {dnachar[j - 2], dnachar[j - 1], dnachar[j]};
-            if(arrtorecv[0] == arrtocheck[0] && arrtorecv[1] == arrtocheck[1] && arrtorecv[2] == arrtocheck[2]) {
-              ++tripletcount;
-            }
-          }
-        }
-        arrtorecv[3] = '\0'; // terminate array at desired point
-        check_error(MPI_Send(arrtorecv, 3, MPI_CHAR, 0, 1, MPI_COMM_WORLD)); // tag 1
-        check_error(MPI_Send(&tripletcount, 1, MPI_INT, 0, 2, MPI_COMM_WORLD)); // tag 2
-      }
+      tripletsarr[i] = triplettable[triplets[i]]; // convert vector of triplets to int representation
     }
   }
 
-  map<string, int> output;
-  if(rank == 0) {
-    MPI_Status status[2];
-    for(int i = 1; i < p; ++i) { // start receiving from process 1
-      for(int j = 0; j < vecsize; ++j) {
-        if(j % (p - 1) == (i - 1)) { // assigns index=0 to rank=1 and loops
-          char arrrecvd[3];
-          check_error(MPI_Recv(arrrecvd, 3, MPI_CHAR, i, 1, MPI_COMM_WORLD, &status[0])); // tag 1
-          int outputcount;
-          check_error(MPI_Recv(&outputcount, 1, MPI_INT, i, 2, MPI_COMM_WORLD, &status[0])); // tag 2
-          string outputstr = arrrecvd;
-          output[outputstr] = outputcount;
+  check_error(MPI_Bcast(tripletsarr, vecsize, MPI_INT, 0, MPI_COMM_WORLD));
+
+  double size = dna.length();
+  int sizeeach = (int) (ceil(size / p)); // size of array to be handled by each process
+  if(sizeeach % 3 != 0) { // ensure sizeeach is divisible by 3
+    sizeeach += (3 - (sizeeach % 3));
+  }
+  check_error(MPI_Bcast(&sizeeach, 1, MPI_INT, 0, MPI_COMM_WORLD));
+  char mydnachar[sizeeach];
+  check_error(MPI_Scatter(dnachar, sizeeach, MPI_CHAR, mydnachar, sizeeach, MPI_CHAR, 0, MPI_COMM_WORLD));
+
+  int myoutput[vecsize];
+  for(int i = 0; i < vecsize; ++i) {
+    int tripletcount = 0;
+    for(int j = 0; j < sizeeach; ++j) {
+      if(j % 3 == 2) { // first runs for index=2
+        char arrtocheck[] = {mydnachar[j - 2], mydnachar[j - 1], mydnachar[j]};
+        string strtocheck = arrtocheck;
+        if(triplettable[strtocheck] == tripletsarr[i]) {
+          ++tripletcount;
         }
+      }
+    }
+    myoutput[i] = tripletcount;
+  }
+
+  int alloutput[p * vecsize];
+  check_error(MPI_Gather(myoutput, vecsize, MPI_INT, alloutput, vecsize, MPI_INT, 0, MPI_COMM_WORLD));
+
+  if(rank == 0) {
+    map<string, int> output;
+    for(int j = 0; j < vecsize; ++j) {
+      output[triplets[j]] = 0; // initialize all map values to 0
+    }
+    for(int i = 0; i < p; ++i) {
+      for(int j = 0; j < vecsize; ++j) {
+        output[triplets[j]] += alloutput[i * vecsize + j];
       }
     }
     // print file out
