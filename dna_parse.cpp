@@ -42,7 +42,6 @@ int main (int argc, char *argv[]) {
     {"CGA", 431}, {"CGT", 432}, {"CGG", 433}, {"CGC", 434},
     {"CCA", 441}, {"CCT", 442}, {"CCG", 443}, {"CCC", 444}
   };
-  map<string, int> output;
 
   // Initialized MPI
   check_error(MPI_Init(&argc, &argv), "unable to initialize MPI");

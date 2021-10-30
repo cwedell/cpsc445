@@ -81,6 +81,11 @@ int main (int argc, char *argv[]) {
   check_error(MPI_Gather(myoutput.data(), sizeeach, MPI_CHAR, output, sizeeach, MPI_CHAR, 0, MPI_COMM_WORLD));
 
   if(rank == 0) {
+    for(int i = 0; i < sizeeach * p; ++i) {
+      if(output[i] != 'A' && output[i] != 'T' && output[i] != 'G' && output[i] != 'C') {
+        output[i] = '\0';
+      }
+    }
     string dnaout = output;
     // print file out
     ofstream outstream(fileout);
