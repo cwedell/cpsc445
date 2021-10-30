@@ -1,9 +1,9 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <math.h>
 #include <mpi.h>
+#include <vector>
 
 using namespace std;
 
@@ -23,7 +23,11 @@ int main (int argc, char *argv[]) {
   string dna = "";
   string line = "";
   char letters[] = {'A', 'T', 'G', 'C'};
-  map<char, int> output = {{'A', 0}, {'T', 0}, {'G', 0}, {'C', 0}};
+  vector<int> output;
+  output.push_back(0);
+  output.push_back(0);
+  output.push_back(0);
+  output.push_back(0);
 
   // Initialized MPI
   check_error(MPI_Init(&argc, &argv), "unable to initialize MPI");
@@ -51,58 +55,46 @@ int main (int argc, char *argv[]) {
   char dnachar[dna.length() + 1];
   strcpy(dnachar, dna.c_str());
   double size = dna.length() + 1;
-  int sizeeach = (int) (ceil(size / p));
+  int sizeeach = (int) (ceil(size / p)); // size of array to be handled by each process
   check_error(MPI_Bcast(&sizeeach, 1, MPI_INT, 0, MPI_COMM_WORLD));
   char mydnachar[sizeeach];
   check_error(MPI_Scatter(dnachar, sizeeach, MPI_CHAR, mydnachar, sizeeach, MPI_CHAR, 0, MPI_COMM_WORLD));
 
-  // cannot broadcast strings, only char arrays
-  // also pass size, for proper iteration
-
-  //if(rank != 0) {
-    int countA = 0, countT = 0, countG = 0, countC = 0;
-    for(int i = 0; i < sizeeach; ++i) {
-      char mychar = mydnachar[i];
-      switch(mychar) {
-        case 'A':
-          ++countA;
-          break;
-        case 'T':
-          ++countT;
-          break;
-        case 'G':
-          ++countG;
-          break;
-        case 'C':
-          ++countC;
-          break;
-      }
+  int countA = 0, countT = 0, countG = 0, countC = 0;
+  for(int i = 0; i < sizeeach; ++i) {
+    char mychar = mydnachar[i];
+    switch(mychar) {
+      case 'A':
+        ++countA;
+        break;
+      case 'T':
+        ++countT;
+        break;
+      case 'G':
+        ++countG;
+        break;
+      case 'C':
+        ++countC;
+        break;
     }
-    int myoutput[] = {countA, countT, countG, countC};
-    //check_error(MPI_Send(myoutput, 4, MPI_INT, 0, 0, MPI_COMM_WORLD)); // tag 0
-  //}
+  }
+  int myoutput[] = {countA, countT, countG, countC};
 
   int alloutputs[p*4];
   check_error(MPI_Gather(myoutput, 4, MPI_INT, alloutputs, 4, MPI_INT, 0, MPI_COMM_WORLD));
 
   if(rank == 0) {
-    for(int i = 0; i < p*4; ++i) {
-    }
-  }
-
-  if(rank == 0) {
     for(int i = 0; i < p; ++i) {
       for(int j = 0; j < 4; ++j) {
-        output[letters[j]] += alloutputs[i*4 + j];
+        output[j] += alloutputs[i*4 + j];
       }
     }
     // print file out
     ofstream outstream(fileout);
-    map<char, int>::iterator it;
-    for(it = output.begin(); it != output.end(); ++it) {
-      string chartostr(1, it->first);
+    for(int i = 0; i < 4; ++i) {
+      string chartostr(1, letters[i]);
       outstream << chartostr << " ";
-      outstream << it->second << endl;
+      outstream << output[i] << endl;
     }
     outstream.close();
   }
