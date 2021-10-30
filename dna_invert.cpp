@@ -1,6 +1,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <math.h>
 #include <mpi.h>
 #include <vector>
 
@@ -48,50 +49,38 @@ int main (int argc, char *argv[]) {
     }
   }
 
-  // cannot broadcast strings, only char arrays
   char dnachar[dna.length() + 1];
   strcpy(dnachar, dna.c_str());
+  double size = dna.length() + 1;
+  int sizeeach = (int) (ceil(size / p)); // size of array to be handled by each process
+  check_error(MPI_Bcast(&sizeeach, 1, MPI_INT, 0, MPI_COMM_WORLD));
+  char mydnachar[sizeeach];
+  check_error(MPI_Scatter(dnachar, sizeeach, MPI_CHAR, mydnachar, sizeeach, MPI_CHAR, 0, MPI_COMM_WORLD));
 
-  // create char array for output, plus null terminator
-  char outputarr[dna.length() - 1];
-  outputarr[dna.length() - 1] = '\0';
-
-  // also pass size, for proper iteration
-  int size = dna.length() + 1;
-  check_error(MPI_Bcast(&size, 1, MPI_INT, 0, MPI_COMM_WORLD));
-  check_error(MPI_Bcast(dnachar, size, MPI_CHAR, 0, MPI_COMM_WORLD));
-
-  if(rank != 0) {
-    char mychar = letters[rank - 1]; // -1 so that rank=1 handles index=0
-    // vector of indexes matching letter, will swap later
-    vector<int> charmatch;
-    for(int i = 0; i < size; ++i) {
-      if(dnachar[i] == mychar) {
-        charmatch.push_back(i);
-      }
+  vector<char> myoutput;
+  for(int i = 0; i < sizeeach; ++i) {
+    char mychar = mydnachar[i];
+    switch(mychar) {
+      case 'A':
+        myoutput.push_back('T');
+        break;
+      case 'T':
+        myoutput.push_back('A');
+        break;
+      case 'G':
+        myoutput.push_back('C');
+        break;
+      case 'C':
+        myoutput.push_back('G');
+        break;
     }
-    int vectorsize = charmatch.size();
-    check_error(MPI_Send(&vectorsize, 1, MPI_INT, 0, 0, MPI_COMM_WORLD)); // tag 0
-    // vector.data() returns a pointer, so no reference necessary
-    check_error(MPI_Send(charmatch.data(), vectorsize, MPI_INT, 0, 1, MPI_COMM_WORLD)); // tag 1
   }
 
+  char output[sizeeach * p];
+  check_error(MPI_Gather(myoutput.data(), sizeeach, MPI_CHAR, output, sizeeach, MPI_CHAR, 0, MPI_COMM_WORLD));
+
   if(rank == 0) {
-    int vecsize;
-    vector<int> indexes;
-    MPI_Status status[2];
-    for(int i = 1; i < p; ++i) { // start receiving from process 1
-      check_error(MPI_Recv(&vecsize, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &status[0])); // tag 0
-      indexes.resize(vecsize); // prepare vector to handle incoming receive
-      check_error(MPI_Recv(indexes.data(), vecsize, MPI_INT, i, 1, MPI_COMM_WORLD, &status[0])); // tag 1
-      while(!indexes.empty()) {
-        int idx = indexes.back();
-        // put the opposite letter to the matching index in our output char array
-        outputarr[idx] = oppletters[i - 1]; // -1 since rank=1 handled index=0
-        indexes.pop_back();
-      }
-    }
-    string dnaout = outputarr;
+    string dnaout = output;
     // print file out
     ofstream outstream(fileout);
     outstream << dnaout << endl;

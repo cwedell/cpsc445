@@ -52,6 +52,7 @@ int main (int argc, char *argv[]) {
       cout << "Invalid input" << endl;
     }
   }
+
   char dnachar[dna.length() + 1];
   strcpy(dnachar, dna.c_str());
   double size = dna.length() + 1;
@@ -80,13 +81,13 @@ int main (int argc, char *argv[]) {
   }
   int myoutput[] = {countA, countT, countG, countC};
 
-  int alloutputs[p*4];
+  int alloutputs[p * 4];
   check_error(MPI_Gather(myoutput, 4, MPI_INT, alloutputs, 4, MPI_INT, 0, MPI_COMM_WORLD));
 
   if(rank == 0) {
     for(int i = 0; i < p; ++i) {
       for(int j = 0; j < 4; ++j) {
-        output[j] += alloutputs[i*4 + j];
+        output[j] += alloutputs[i * 4 + j];
       }
     }
     // print file out
