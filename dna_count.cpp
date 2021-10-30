@@ -55,7 +55,7 @@ int main (int argc, char *argv[]) {
 
   char dnachar[dna.length() + 1];
   strcpy(dnachar, dna.c_str());
-  double size = dna.length() + 1;
+  double size = dna.length();
   int sizeeach = (int) (ceil(size / p)); // size of array to be handled by each process
   check_error(MPI_Bcast(&sizeeach, 1, MPI_INT, 0, MPI_COMM_WORLD));
   char mydnachar[sizeeach];
