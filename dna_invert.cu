@@ -58,8 +58,6 @@ int main() {
 	char* dnaout = new char[dna.length() + 1];
 	cudaMemcpy(dnaout, dnainput, size * sizeof(char), cudaMemcpyDeviceToHost);
 
-	cout << "dnaout[0] = " << dnaout[0] << endl;
-
 	ofstream outstream(fileout);
 	for (int i = 0; i < size; ++i) {
 		if (dnaout[i] == 'A' || dnaout[i] == 'T' || dnaout[i] == 'G' || dnaout[i] == 'C') {
