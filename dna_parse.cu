@@ -92,7 +92,7 @@ int main() {
 
 	// this vector exists only to ensure duplicate triplets are not included
 	vector<string> triplets;
-	for(int i = 0; i < dna.length() - 1; ++i) {
+	for(int i = 0; i < dna.length(); ++i) {
 		if(i % 3 == 2) { // first runs for index=2
 			char tripletarr[] = {dnachar[i - 2], dnachar[i - 1], dnachar[i], '\0'};
 			string tripletstr = tripletarr;
