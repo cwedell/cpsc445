@@ -47,14 +47,16 @@ int main() {
 	strcpy(dnachar, dna.c_str());
 	int size = dna.length();
 
+	// send char array to device
 	char* dnainput;
 	cudaMalloc((void**)&dnainput, size * sizeof(char));
-
 	cudaMemcpy(dnainput, dnachar, size * sizeof(char), cudaMemcpyHostToDevice);
 
+	// one thread per character
 	charinvert<<<1, size>>>(dnainput);
 	cudaDeviceSynchronize();
 
+	// get inverted char array from device
 	char* dnaout = new char[dna.length() + 1];
 	cudaMemcpy(dnaout, dnainput, size * sizeof(char), cudaMemcpyDeviceToHost);
 
