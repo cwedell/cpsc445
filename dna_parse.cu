@@ -121,16 +121,23 @@ int main() {
 	int* tripletsoutput = new int[vecsize];
 	cudaMemcpy(tripletsoutput, tripletsinput, vecsize * sizeof(int), cudaMemcpyDeviceToHost);
 
-	ofstream outstream(fileout);
+  ofstream outstream(fileout);
+	map<string, int> output;
 	for(int i = 0; i < vecsize; ++i) {
-		outstream << triplets[i] << " " << tripletsoutput[i] << endl;
+		output[triplets[i]] = tripletsoutput[i];
+	}
+	map<string, int>::iterator it;
+	for(it = output.begin(); it != output.end(); ++it) {
+		outstream << it->first << " ";
+		outstream << it->second << endl;
+		cout << it->first << " " << it->second << endl;
 	}
 	outstream.close();
 
 	cudaFree(dnainput);
 	cudaFree(tripletsinput);
-  free(dnachar);
-  free(tripletsarr);
+	free(dnachar);
+	free(tripletsarr);
 	free(tripletsoutput);
 	return 0;
 }
