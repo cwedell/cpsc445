@@ -9,6 +9,9 @@ using namespace std;
 
 __global__ void sqrtcalc(float* inputs) {
   int myrank = blockIdx.x * blockDim.x + threadIdx.x;
+  if(myrank % 100 == 0) {
+    cout << myrank << endl;
+  }
 	float mynum = inputs[myrank];
 	mynum = sqrt(mynum);
 	inputs[myrank] = mynum;
