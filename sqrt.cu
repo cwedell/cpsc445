@@ -28,7 +28,6 @@ int main() {
 		if(instream.is_open()) {
 			while(getline(instream, line)) {
 				nums.push_back(stof(line));
-				cout << stof(line) << endl;
 			}
 		}
 		instream.close();
@@ -52,6 +51,7 @@ int main() {
 	ofstream outstream(fileout);
 	for(int i = 0; i < size; ++i) {
 		outstream << outputs[i] << endl;
+    cout << "sqrt of " << nums[i] << " = " << outputs[i] << endl;
 	}
 	outstream.close();
 
