@@ -28,6 +28,7 @@ int main() {
 		if(instream.is_open()) {
 			while(getline(instream, line)) {
 				nums.push_back(stof(line));
+				cout << stof(line) << endl;
 			}
 		}
 		instream.close();
