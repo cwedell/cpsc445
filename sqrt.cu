@@ -43,7 +43,7 @@ int main() {
 	cudaMalloc((void**)&inputs, size * sizeof(float));
 	cudaMemcpy(inputs, sqrts, size * sizeof(float), cudaMemcpyHostToDevice);
 
-	sqrtcalc<<<10, (int)size/10>>>(inputs);
+	sqrtcalc<<<10, 1024>>>(inputs);
 	cudaDeviceSynchronize();
 
 	float* outputs = new float[size];
