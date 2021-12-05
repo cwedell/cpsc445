@@ -45,7 +45,7 @@ int main() {
 	cudaMalloc((void**)&inputs, size * sizeof(float));
 	cudaMemcpy(inputs, sqrts, size * sizeof(float), cudaMemcpyHostToDevice);
 
-	sqrtcalc<<<20, 512>>>(inputs, size);
+	sqrtcalc<<<100, 1000>>>(inputs, size);
 	cudaDeviceSynchronize();
 
 	float* outputs = new float[size];
@@ -54,7 +54,6 @@ int main() {
 	ofstream outstream(fileout);
 	for(int i = 0; i < size; ++i) {
 		outstream << outputs[i] << endl;
-    cout << "sqrt of " << nums[i] << " = " << outputs[i] << endl;
 	}
 	outstream.close();
 
