@@ -7,14 +7,13 @@
 
 using namespace std;
 
-__global__ void sqrtcalc(float* inputs) {
+__global__ void sqrtcalc(float* inputs, int size) {
   int myrank = blockIdx.x * blockDim.x + threadIdx.x;
-  if(myrank % 100 == 0) {
-    printf("rank is %d", myrank);
+  if(myrank < size) {
+    float mynum = inputs[myrank];
+    mynum = sqrt(mynum);
+    inputs[myrank] = mynum;
   }
-	float mynum = inputs[myrank];
-	mynum = sqrt(mynum);
-	inputs[myrank] = mynum;
 	__syncthreads();
 }
 
@@ -46,7 +45,7 @@ int main() {
 	cudaMalloc((void**)&inputs, size * sizeof(float));
 	cudaMemcpy(inputs, sqrts, size * sizeof(float), cudaMemcpyHostToDevice);
 
-	sqrtcalc<<<20, 512>>>(inputs);
+	sqrtcalc<<<20, 512>>>(inputs, size);
 	cudaDeviceSynchronize();
 
 	float* outputs = new float[size];
