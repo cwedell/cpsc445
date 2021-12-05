@@ -10,7 +10,7 @@ using namespace std;
 __global__ void sqrtcalc(float* inputs) {
   int myrank = blockIdx.x * blockDim.x + threadIdx.x;
   if(myrank % 100 == 0) {
-    printf(myrank);
+    printf("rank is %d", myrank);
   }
 	float mynum = inputs[myrank];
 	mynum = sqrt(mynum);
