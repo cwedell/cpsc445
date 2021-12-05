@@ -8,9 +8,10 @@
 using namespace std;
 
 __global__ void sqrtcalc(float* inputs) {
-	float mynum = inputs[threadIdx.x];
+  int myrank = blockIdx.x * blockDim.x + threadIdx.x;
+	float mynum = inputs[myrank];
 	mynum = sqrt(mynum);
-	inputs[threadIdx.x] = mynum;
+	inputs[myrank] = mynum;
 	__syncthreads();
 }
 
@@ -42,7 +43,7 @@ int main() {
 	cudaMalloc((void**)&inputs, size * sizeof(float));
 	cudaMemcpy(inputs, sqrts, size * sizeof(float), cudaMemcpyHostToDevice);
 
-	sqrtcalc<<<1, size>>>(inputs);
+	sqrtcalc<<<10, (int)size/10>>>(inputs);
 	cudaDeviceSynchronize();
 
 	float* outputs = new float[size];
