@@ -9,7 +9,7 @@ using namespace std;
 
 __global__ void sqrtcalc(float* inputs, int size, int iter) {
 	int myrank = blockIdx.x * blockDim.x + threadIdx.x;
-	extern __shared__ float shinputs[];
+	__shared__ float shinputs[10000];
 	if(myrank < size) {
     shinputs[myrank] = inputs[myrank*iter];
 		shinputs[myrank] = sqrt(shinputs[myrank]);
