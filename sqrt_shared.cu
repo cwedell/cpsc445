@@ -8,8 +8,8 @@
 using namespace std;
 
 __global__ void sqrtcalc(float* inputs, int size) {
-  printf("my rank is %f\n", myrank);
 	int myrank = blockIdx.x * blockDim.x + threadIdx.x;
+  printf("my rank is %f\n", myrank);
 	extern __shared__ float shinputs[];
 	if(myrank < size) {
     shinputs[myrank] = inputs[myrank];
