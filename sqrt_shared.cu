@@ -15,6 +15,7 @@ __global__ void sqrtcalc(float* inputs, int size) {
 		shinputs[myrank] = sqrt(shinputs[myrank]);
 	}
 	__syncthreads();
+  printf("my rank is %f\n", myrank);
   if(myrank < size) {
 		inputs[myrank] = shinputs[myrank];
     if(myrank % 1000 == 0) {
