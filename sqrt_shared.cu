@@ -7,20 +7,16 @@
 
 using namespace std;
 
-__global__ void sqrtcalc(float* inputs, int size) {
+__global__ void sqrtcalc(float* inputs, int size, int iter) {
 	int myrank = blockIdx.x * blockDim.x + threadIdx.x;
-  printf("my rank is %f\n", myrank);
 	extern __shared__ float shinputs[];
 	if(myrank < size) {
-    shinputs[myrank] = inputs[myrank];
+    shinputs[myrank] = inputs[myrank*iter];
 		shinputs[myrank] = sqrt(shinputs[myrank]);
 	}
 	__syncthreads();
   if(myrank < size) {
-		inputs[myrank] = shinputs[myrank];
-    if(myrank % 1000 == 0) {
-      printf("rank %f is writing %f to %f", myrank, shinputs[myrank], inputs[myrank]);
-    }
+		inputs[myrank*iter] = shinputs[myrank];
 	}
   __syncthreads();
 }
@@ -53,8 +49,16 @@ int main() {
 	cudaMalloc((void**)&inputs, size * sizeof(float));
 	cudaMemcpy(inputs, sqrts, size * sizeof(float), cudaMemcpyHostToDevice);
 
-	sqrtcalc<<<ceil((float)size/1000), 1000, size * sizeof(float)>>>(inputs, size);
-	cudaDeviceSynchronize();
+  if(size <= 10000) {
+    sqrtcalc<<<ceil((float)size/1000), 1000, size * sizeof(float)>>>(inputs, size, 1);
+    cudaDeviceSynchronize();
+  } else {
+    int sizeeach = ceil((float)size/10);
+    for(int i = 0; i < 10; ++i) {
+      sqrtcalc<<<ceil((float)sizeeach/1000), 1000, sizeeach * sizeof(float)>>>(inputs, sizeeach, i+1);
+      cudaDeviceSynchronize();
+    }
+  }
 
 	float* outputs = new float[size];
 	cudaMemcpy(outputs, inputs, size * sizeof(float), cudaMemcpyDeviceToHost);
