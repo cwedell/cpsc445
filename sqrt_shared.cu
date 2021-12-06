@@ -8,16 +8,16 @@
 using namespace std;
 
 __global__ void sqrtcalc(float* inputs, int size) {
-	int myrank = threadIdx.x;
+	int myrank = blockIdx.x * blockDim.x + threadIdx.x;
 	extern __shared__ float shinputs[];
 	if(myrank < size) {
 		float mynum = inputs[myrank];
 		mynum = sqrt(mynum);
-		shinputs[myrank] = mynum;
+		shinputs[threadIdx.x] = mynum;
 	}
 	__syncthreads();
   if(myrank < size) {
-		inputs[myrank] = shinputs[myrank];
+		inputs[myrank] = shinputs[threadIdx.x];
 	}
 }
 
