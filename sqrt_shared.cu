@@ -14,9 +14,9 @@ __global__ void sqrtcalc(float* inputs, int size) {
 		float mynum = inputs[myrank];
 		mynum = sqrt(mynum);
 		shinputs[myrank] = mynum;
-    inputs[myrank] = shinputs[myrank];
 	}
 	__syncthreads();
+	inputs[myrank] = shinputs[myrank];
 }
 
 int main() {
