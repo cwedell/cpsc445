@@ -14,10 +14,11 @@ __global__ void sqrtcalc(float* inputs, int size) {
 		float mynum = inputs[myrank];
 		mynum = sqrt(mynum);
 		shinputs[myrank] = mynum;
-		printf("writing output %d\n", mynum);
 	}
 	__syncthreads();
-	inputs[myrank] = shinputs[myrank];
+  if(myrank < size) {
+		inputs[myrank] = shinputs[myrank];
+	}
 }
 
 int main() {
@@ -57,7 +58,6 @@ int main() {
 	ofstream outstream(fileout);
 	for(int i = 0; i < size; ++i) {
 		outstream << outputs[i] << endl;
-		cout << outputs[i] << endl;
 	}
 	outstream.close();
 
