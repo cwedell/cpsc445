@@ -22,7 +22,7 @@ __global__ void sqrtcalc(float* inputs, int size) {
 }
 
 int main() {
-	string filein = "D:\\Documents\\Chapman\\CPSC445\\assignment05\\input.csv";
+	string filein = "input.csv";
 	string fileout = "output.csv";
 	vector<float> nums;
 	string line = "";
@@ -58,7 +58,6 @@ int main() {
 	ofstream outstream(fileout);
 	for(int i = 0; i < size; ++i) {
 		outstream << outputs[i] << endl;
-		cout << outputs[i] << endl;
 	}
 	outstream.close();
 
