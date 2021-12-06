@@ -22,6 +22,7 @@ __global__ void sqrtcalc(float* inputs, int size) {
       printf("writing from %f to %f\n", shinputs[myrank], inputs[myrank]);
     }
 	}
+  __syncthreads();
 }
 
 int main() {
