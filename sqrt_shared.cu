@@ -11,14 +11,14 @@ __global__ void sqrtcalc(float* inputs, int size) {
 	int myrank = blockIdx.x * blockDim.x + threadIdx.x;
 	extern __shared__ float shinputs[];
 	if(myrank < size) {
-		float mynum = inputs[myrank];
-		mynum = sqrt(mynum);
-		shinputs[threadIdx.x] = mynum;
+    shinputs[myrank] = inputs[myrank];
+		shinputs[myrank] = sqrt(shinputs[myrank]);
 	}
 	__syncthreads();
   if(myrank < size) {
-		inputs[myrank] = shinputs[threadIdx.x];
+		inputs[myrank] = shinputs[myrank];
 	}
+  __syncthreads();
 }
 
 int main() {
