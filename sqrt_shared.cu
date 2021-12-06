@@ -7,22 +7,22 @@
 
 using namespace std;
 
-__global__ void sqrtcalc(float* inputs, int size, int iter) {
+__global__ void sqrtcalc(float* inputs, int size) {
 	int myrank = blockIdx.x * blockDim.x + threadIdx.x;
-	__shared__ float shinputs[10000];
+	extern __shared__ float shinputs[];
 	if(myrank < size) {
-    shinputs[myrank] = inputs[myrank*iter];
+		shinputs[myrank] = inputs[myrank];
 		shinputs[myrank] = sqrt(shinputs[myrank]);
 	}
 	__syncthreads();
-  if(myrank < size) {
-		inputs[myrank*iter] = shinputs[myrank];
+	if(myrank < size) {
+		inputs[myrank] = shinputs[myrank];
 	}
-  __syncthreads();
+	__syncthreads();
 }
 
 int main() {
-	string filein = "input.csv";
+	string filein = "D:\\Documents\\Chapman\\CPSC445\\assignment05\\input.csv";
 	string fileout = "output.csv";
 	vector<float> nums;
 	string line = "";
@@ -49,16 +49,8 @@ int main() {
 	cudaMalloc((void**)&inputs, size * sizeof(float));
 	cudaMemcpy(inputs, sqrts, size * sizeof(float), cudaMemcpyHostToDevice);
 
-  if(size <= 10000) {
-    sqrtcalc<<<ceil((float)size/1000), 1000, size * sizeof(float)>>>(inputs, size, 1);
-    cudaDeviceSynchronize();
-  } else {
-    int sizeeach = ceil((float)size/10);
-    for(int i = 0; i < 10; ++i) {
-      sqrtcalc<<<ceil((float)sizeeach/1000), 1000, sizeeach * sizeof(float)>>>(inputs, sizeeach, i+1);
-      cudaDeviceSynchronize();
-    }
-  }
+	sqrtcalc<<<ceil((float)size/1000), 1000, size * sizeof(float)>>>(inputs, size);
+	cudaDeviceSynchronize();
 
 	float* outputs = new float[size];
 	cudaMemcpy(outputs, inputs, size * sizeof(float), cudaMemcpyDeviceToHost);
@@ -66,6 +58,7 @@ int main() {
 	ofstream outstream(fileout);
 	for(int i = 0; i < size; ++i) {
 		outstream << outputs[i] << endl;
+		cout << outputs[i] << endl;
 	}
 	outstream.close();
 
