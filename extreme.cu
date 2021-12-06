@@ -12,42 +12,41 @@ __global__ void extreme(float** inputs, int sizei, int sizej, float** outputs) {
 	int myrank = threadIdx.x;
 	int myi = myrank / sizei;
 	int myj = myrank % sizej;
-	float mynum = inputs[myi][myj];
+	float* mynum = &inputs[myi][myj];
 	bool ismax = true; // determine if we're larger than surrounding cells
 	if(myi > 0) {
-		if(inputs[myi-1][myj] >= mynum) {ismax = false;}
+		if(&inputs[myi-1][myj] >= mynum) {ismax = false;}
 		if(myj > 0) {
-			if(inputs[myi-1][myj-1] >= mynum) {ismax = false;}
+			if(&inputs[myi-1][myj-1] >= mynum) {ismax = false;}
 			if(myj < sizej-1) {
-				if(inputs[myi-1][myj+1] >= mynum) {ismax = false;}
+				if(&inputs[myi-1][myj+1] >= mynum) {ismax = false;}
 			}
 		}
 	}
 	if(myi < sizei-1) {
-		if(inputs[myi+1][myj] >= mynum) {ismax = false;}
+		if(&inputs[myi+1][myj] >= mynum) {ismax = false;}
 		if(myj > 0) {
-			if(inputs[myi+1][myj-1] >= mynum) {ismax = false;}
+			if(&inputs[myi+1][myj-1] >= mynum) {ismax = false;}
 			if(myj < sizej-1) {
-				if(inputs[myi+1][myj+1] >= mynum) {ismax = false;}
+				if(&inputs[myi+1][myj+1] >= mynum) {ismax = false;}
 			}
 		}
 	}
 	if(myj > 0) {
-		if(inputs[myi][myj-1] >= mynum) {ismax = false;}
+		if(&inputs[myi][myj-1] >= mynum) {ismax = false;}
 	}
 	if(myj < sizej - 1) {
-		if(inputs[myi][myj+1] >= mynum) {ismax = false;}
+		if(&inputs[myi][myj+1] >= mynum) {ismax = false;}
 	}
 	if(ismax) {
 		outputs[myrank][0] = myi;
 		outputs[myrank][1] = myj;
-		printf("found a match! rank %f", myrank);
 	}
 	__syncthreads();
 }
 
 int main() {
-	string filein = "D:\\Documents\\Chapman\\CPSC445\\assignment05\\input.csv";
+	string filein = "input.csv";
 	string fileout = "output.csv";
 	string line = "";
 	vector<vector<float>> datavec;
@@ -86,8 +85,15 @@ int main() {
 	}
 
 	float** inputs;
-	cudaMalloc((void**)&inputs, sizei * sizej * sizeof(float));
-	cudaMemcpy(inputs, data, sizei * sizej * sizeof(float), cudaMemcpyHostToDevice);
+	float* temp[5];
+	cudaMalloc((void**)&inputs, sizei * sizeof(float*));
+	for(int i = 0; i < sizei; ++i) {
+		cudaMalloc((void**)&temp[i], sizej * sizeof(float));
+	}
+	cudaMemcpy(inputs, temp, sizei * sizeof(float*), cudaMemcpyHostToDevice);
+	for(int i = 0; i < sizei; ++i) {
+		cudaMemcpy(temp[i], data[i], sizej * sizeof(float), cudaMemcpyHostToDevice);
+	}
 
 	float** placeholder = new float*[sizei * sizej];
 	for(int i = 0; i < sizei * sizej; ++i) {
@@ -98,6 +104,9 @@ int main() {
 
 	float** outputs;
 	cudaMalloc((void**)&outputs, sizei * sizej * sizeof(float));
+	for(int i = 0; i < sizei; ++i) {
+		cudaMalloc((void**)&outputs[i], sizej * sizeof(float));
+	}
 	cudaMemcpy(outputs, placeholder, sizei * sizej * sizeof(float), cudaMemcpyHostToDevice);
 
 	extreme<<<1,sizei*sizej>>>(inputs, sizei, sizej, outputs);
@@ -107,9 +116,7 @@ int main() {
 
 	ofstream outstream(fileout);
 	for(int i = 0; i < sizei * sizej; ++i) {
-		cout << "outputs here are " << placeholder[i][0] << "," << placeholder[i][1] << endl;
 		if(placeholder[i][0] != -1.0 && placeholder[i][1] != -1.0) {
-			outstream << placeholder[i][0] << "," << placeholder[i][1] << endl;
 		}
 	}
 	outstream.close();
